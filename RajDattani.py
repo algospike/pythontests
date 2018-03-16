@@ -2,9 +2,11 @@ import requests as request
 import urllib
 from bs4 import BeautifulSoup as soup 
 import  time
+from array import array
+
+
 
 lastText = ""
-
 
 def urlRajDattani():
     try:
@@ -19,12 +21,11 @@ def urlRajDattani():
 def sendTelegram(totalResponse):
     try:
         print("in sendTelegram")
-        url = "https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/sendMessage?chat_id=464308445&text= " + totalResponse
-        url1 = "https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/sendMessage?chat_id=506426930&text= " + totalResponse
-        url2 = "https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/sendMessage?chat_id=489260733&text= " + totalResponse
-        request.get(url)
-        request.get(url1)
-        request.get(url2)
+        chat_id = ["","",""] #chat_id 
+        bot_id = "" #bot id 
+        for id in chat_id:
+            url = "https://api.telegram.org/" + bot_id + "/sendMessage?chat_id=" + id + "&text= " + totalResponse
+            request.get(url)
         return True 
     except:
         time.sleep(60)
@@ -60,4 +61,11 @@ def rajDattani():
 
 
 while True:
-    rajDattani()
+    try:
+        rajDattani()
+    except:
+        time.sleep(60)
+        rajDattani()
+    
+        
+    
