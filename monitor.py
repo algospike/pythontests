@@ -14,10 +14,28 @@ import json
 import datetime 
 from math import floor
 import sched, time
+import datetime
+
 
 
 dict ={}
 s = sched.scheduler(time.time, time.sleep)
+
+
+def writeToDisk():
+    global dict
+    now = datetime.datetime.now()
+    filename = 'user_info' + now.year + '-'+ now.month + '-' + now.day 
+    with open(filename,'w') as f:
+        f.write(json.dumps(dict))
+    with open(user_info,'w') as f:
+        f.write(json.dumps(dict))
+
+def readDicFromFile():
+    global dict
+    dict = {}
+     with open('user_info','r') as f:
+        dict = eval(f.read())
 
 def shareNameExchange(shareCall):
     text = shareCall.text.split(",")
