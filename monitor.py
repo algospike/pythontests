@@ -7,38 +7,34 @@ Created on Apr 13, 2018
 from Domains.Share import Share
 from Domains.ShareCal import ShareCall
 from Domains.shareInfo import ShareInfo
+from Domains.TextDecode import TextDecode
 import requests as request 
 from bs4 import BeautifulSoup as soup 
 from googlefinance.client import get_price_data
 import json
 import datetime 
 from math import floor
-import sched, time
-import datetime
-
 
 
 dict ={}
-s = sched.scheduler(time.time, time.sleep)
-
 
 def writeToDisk():
     global dict
     now = datetime.datetime.now()
-    filename = 'user_info' + now.year + '-'+ now.month + '-' + now.day 
+    filename = 'user_info' + str(now.year) + '-'+ str(now.month) + '-' + str(now.day) 
     with open(filename,'w') as f:
         f.write(json.dumps(dict))
-    with open(user_info,'w') as f:
+    with open('user_info','w') as f:
         f.write(json.dumps(dict))
 
 def readDicFromFile():
     global dict
     dict = {}
-     with open('user_info','r') as f:
+    with open('user_info','r') as f:
         dict = eval(f.read())
     print('dict',dict)
 
-def shareNameExchange(shareCall):split
+def shareNameExchange(shareCall):
     text = shareCall.text.split(",")
     shareName = text[1].strip().replace(" " , "+")
     url ="https://www.google.co.in/search?q=" + shareName +"+share+price&oq=" +shareName+"+share+price&aqs=chrome..69i57j0l2.8499j0j4&sourceid=chrome&ie=UTF-8"
@@ -55,7 +51,7 @@ def shareNameExchange(shareCall):split
     return shareInfo
     
 def telegramUpdate():
-    print("asdfg")
+    print("Telegram Update")
     totalCall = []
     nwTime = datetime.datetime.now().timestamp()
     nw = floor(nwTime)
@@ -79,18 +75,34 @@ def telegramUpdate():
     
     return totalCall
 
-def buyShare(chatId , shareName ,shareExchange,buyPrice , noOfShare , stopLoss , targetPrice , buyDate):
-    shareList = dict.get(chatId)
+def convertText(text):
+    text = text.split(",")
+    textDecode = TextDecode()
+    textDecode.typeMethod = text[0]
+    textDecode.shareName = text[1]
+    textDecode.noOfShare = text[2]
+    textDecode.price = text[3]
+    if "buy" == text[0].lower():
+        textDecode.stopLoss = text[4]
+        textDecode.targetPrice = text[5]
+    return textDecode
+def buyShare(shareInfo):
+    shareCall = shareInfo.ShareCall
+    shareList = dict.get(shareCall.chatId)
+    if len(shareInfo.ShareCall.text.split(",")) != 6:
+        return None
+    textDecode = convertText(shareInfo.ShareCall.text)
     share = Share() 
     id = 1
     if not shareList:
         shareList = []
     else:
         id = len(shareList) + 1
-    share.populateBasicShare(id, shareName,shareExchange , buyPrice , noOfShare , stopLoss , targetPrice , buyDate) 
-    share.populateCalShare(0, 0, 0, 0, 0, 0, 0,0)
+    share.populateBasicShare(id, shareInfo.shareName, shareInfo.shareExchange , textDecode.price , 
+                             textDecode.noOfShare , textDecode.stopLoss , textDecode.targetPrice , shareCall.date) 
+    share.populateCalShare(0, 0, 0, 0, 0, 0, 0, 0)
     shareList.append(share)
-    dict.update({chatId:shareList})    
+    dict.update({shareCall.chatId:shareList})    
           
 def sellShare(chatId ,shareId, noOfShare , sellPrice):
     shareList = dict.get(chatId)
@@ -114,7 +126,7 @@ def sellShare(chatId ,shareId, noOfShare , sellPrice):
             
     
 
-
+'''
 buyShare(1234, "asdassd","NSE", 10, 2, "stopLoss", "targetPrice", "buyDate")
 sellShare(1234, 1, 1 , 15)
 print(dict.get(1234)[0].shareName)
@@ -123,13 +135,22 @@ print(dict.get(1234)[0].netProfit)
 print("changes")
 sellShare(1234, 1, 1, 20)
 print(dict.get(1234)[0].netProfit)
+'''
+                    
+import pprint
+
 
 totalCall = telegramUpdate()
 for call in totalCall:
     shareInfo = shareNameExchange(call)
     text = shareInfo.ShareCall.text.split(",")
-    
-    
+    if "buy" == text[0].lower():
+        buyShare(shareInfo)
+        print('printing dict',dict)
+        if dict.get(464308445):
+            print(dict.get(464308445)[0].shareName)
+        writeToDisk()
+        
     
 
 
