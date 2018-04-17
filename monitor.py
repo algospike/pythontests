@@ -36,8 +36,9 @@ def readDicFromFile():
     dict = {}
      with open('user_info','r') as f:
         dict = eval(f.read())
+    print('dict',dict)
 
-def shareNameExchange(shareCall):
+def shareNameExchange(shareCall):split
     text = shareCall.text.split(",")
     shareName = text[1].strip().replace(" " , "+")
     url ="https://www.google.co.in/search?q=" + shareName +"+share+price&oq=" +shareName+"+share+price&aqs=chrome..69i57j0l2.8499j0j4&sourceid=chrome&ie=UTF-8"
