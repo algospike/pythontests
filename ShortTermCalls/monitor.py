@@ -14,18 +14,20 @@ from googlefinance.client import get_price_data
 import json
 import datetime 
 from math import floor
-
+import jsonpickle
+import pprint
 
 dict ={}
 
 def writeToDisk():
+    print('writing to disk')
     global dict
     now = datetime.datetime.now()
-    filename = 'user_info' + str(now.year) + '-'+ str(now.month) + '-' + str(now.day) 
+    filename = 'user_info_' + str(now.year) + '-'+ str(now.month) + '-' + str(now.day) 
     with open(filename,'w') as f:
-        f.write(json.dumps(dict))
+        f.write(jsonpickle.encode(dict))
     with open('user_info','w') as f:
-        f.write(json.dumps(dict))
+        f.write(jsonpickle.encode(dict))
 
 def readDicFromFile():
     global dict
@@ -50,6 +52,8 @@ def shareNameExchange(shareCall):
     shareInfo.populateShareInfo(shareName , shareExchange , shareCode , shareCall)
     return shareInfo
     
+
+
 def telegramUpdate():
     print("Telegram Update")
     totalCall = []
@@ -86,6 +90,7 @@ def convertText(text):
         textDecode.stopLoss = text[4]
         textDecode.targetPrice = text[5]
     return textDecode
+
 def buyShare(shareInfo):
     shareCall = shareInfo.ShareCall
     shareList = dict.get(shareCall.chatId)
@@ -137,20 +142,22 @@ sellShare(1234, 1, 1, 20)
 print(dict.get(1234)[0].netProfit)
 '''
                     
-import pprint
-
-
 totalCall = telegramUpdate()
 for call in totalCall:
-    shareInfo = shareNameExchange(call)
-    text = shareInfo.ShareCall.text.split(",")
-    if "buy" == text[0].lower():
-        buyShare(shareInfo)
-        print('printing dict',dict)
-        if dict.get(464308445):
-            print(dict.get(464308445)[0].shareName)
-        writeToDisk()
-        
+    shareInfo = None
+    try:
+        shareInfo = shareNameExchange(call)    
+    except:
+        print('Error')
+    if shareInfo:
+        text = shareInfo.ShareCall.text.split(",")
+        if "buy" == text[0].lower():
+            buyShare(shareInfo)
+            #print('printing dict',dict)
+            if dict.get(464308445):
+                print(dict.get(464308445)[0].shareName)
+writeToDisk()
+readDicFromFile()
     
 
 
