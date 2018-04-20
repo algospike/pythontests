@@ -24,10 +24,11 @@ class Share:
     realizedProfit = ""
     
     
-    def populateBasicShare(self, shareId , sharename ,shareExchange, boughtPrice , noOfShare , stopLoss , targetPrice , buydate ):
+    def populateBasicShare(self, shareId , sharename ,shareCode ,shareExchange, boughtPrice , noOfShare , stopLoss , targetPrice , buydate ):
         self.shareId = shareId
         self.shareName = sharename
         self.shareExchange = shareExchange
+        self.shareCode = shareCode
         self.boughtPrice = boughtPrice
         self.noOfShares = noOfShare
         self.stopLoss = stopLoss
