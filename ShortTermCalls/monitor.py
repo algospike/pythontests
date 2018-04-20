@@ -16,6 +16,9 @@ import datetime
 from math import floor
 import jsonpickle
 import pprint
+import schedule
+import time
+
 
 dict ={}
 
@@ -141,26 +144,33 @@ print("changes")
 sellShare(1234, 1, 1, 20)
 print(dict.get(1234)[0].netProfit)
 '''
-                    
-totalCall = telegramUpdate()
 
-for call in totalCall:
-    shareInfo = None
-    try:
-        shareInfo = shareNameExchange(call)    
-    except:
-        print('Error')
-    if shareInfo:
-        text = shareInfo.ShareCall.text.split(",")
-        if "buy" == text[0].lower():
-            buyShare(shareInfo)
-            #print('printing dict',dict)
-            if dict.get(464308445):
-                print(dict.get(464308445)[0].shareName)
-writeToDisk()
-readDicFromFile()
-    
+def sendUpdateMessage(response):
+    print('Successfully ' + response)
+
+def mainfunction():
+    totalCall = telegramUpdate()
+
+    for call in totalCall:
+        shareInfo = None
+        try:
+            shareInfo = shareNameExchange(call)    
+        except:
+            print('Error')
+        if shareInfo:
+            text = shareInfo.ShareCall.text.split(",")
+            if "buy" == text[0].lower():
+                buyShare(shareInfo)
+    writeToDisk()
+    readDicFromFile()
+    sendUpdateMessage(text[0].lower())
+        
 
 
   
 
+schedule.every(5).minutes.do(mainfunction)
+
+while True:
+    schedule.run_pending()
+    time.sleep(1)
