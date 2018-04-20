@@ -30,13 +30,19 @@ def writeToDisk():
         f.write(jsonpickle.encode(dict))
     with open('user_info','w') as f:
         f.write(jsonpickle.encode(dict))
+    with open('arpan_sndhu_'+ str(now.year) + '-'+ str(now.month) + '-' + str(now.day),'w') as f:
+        f.write(jsonpickle.encode(dict.get(464308445)))
+    with open('bhupi_sndhu_'+ str(now.year) + '-'+ str(now.month) + '-' + str(now.day),'w') as f:
+        f.write(jsonpickle.encode(dict.get(2)))
+    with open('sr_'+ str(now.year) + '-'+ str(now.month) + '-' + str(now.day),'w') as f:
+        f.write(jsonpickle.encode(dict.get(576286820)))
 
 def readDicFromFile():
     global dict
     dict = {}
     with open('user_info','r') as f:
         dict = eval(f.read())
-    print('dict',dict)
+    #print('dict',dict)
 
 def shareNameExchange(shareCall):
     text = shareCall.text.split(",")
@@ -182,7 +188,8 @@ def monitorShares():
     for key in keys:
         shareList = dict.get(key)
         for share in shareList:
-            print("in second for loop")
+            print(share)
+            share = jsonpickle.decode(json.dumps(share)) 
             if share.remainingShare != 0:
                 print("in if " , share.remainingShare)
                 monitorShare(share ,key)
@@ -201,9 +208,7 @@ sellShare(1234, 1, 1, 20)
 print(dict.get(1234)[0].netProfit)
 '''
                     
-monitorShares()
-#writeToDisk()
-#readDicFromFile()
+
 
 def sendUpdateMessage(response):
     print('Successfully ' + response)
@@ -225,8 +230,15 @@ def mainfunction():
                 sellShare(shareInfo)
     writeToDisk()
     readDicFromFile()
-    sendUpdateMessage(text[0].lower())      
-schedule.every(5).minutes.do(mainfunction)
+    sendUpdateMessage(text[0].lower())    
+
+
+schedule.every(1).seconds.do(mainfunction)
+schedule.every(1).seconds.do(monitorShares)
+
+
+#schedule.every(5).minutes.do(mainfunction)
+#schedule.every(2).hour.do(monitorShares)
 
 while True:
     schedule.run_pending()
