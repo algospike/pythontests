@@ -10,15 +10,14 @@ from Domains.shareInfo import ShareInfo
 from Domains.TextDecode import TextDecode
 import requests as request 
 from bs4 import BeautifulSoup as soup 
+import pandas as pd
 from googlefinance.client import get_price_data
 import json
 import datetime 
 from math import floor
 import jsonpickle
-import pprint
-import schedule
 import time
-
+import schedule
 
 dict ={}
 
@@ -54,9 +53,20 @@ def shareNameExchange(shareCall):
     shareInfo = ShareInfo()
     shareInfo.populateShareInfo(shareName , shareExchange , shareCode , shareCall)
     return shareInfo
-    
-
-
+  
+def sendTelegram(totalResponse , chatId):
+    try:
+        print("in sendTelegram" , totalResponse)
+        bot_id = "bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I" #bot id 
+        url = "https://api.telegram.org/" + bot_id + "/sendMessage?chat_id=" + str(chatId) + "&text= " + str(totalResponse)+"&parse_mode=Markdown"   
+        request.get(url)
+        return True 
+    except Exception as e:
+        print(e)
+        time.sleep(60)
+        sendTelegram(totalResponse,chatId)
+        
+            
 def telegramUpdate():
     print("Telegram Update")
     totalCall = []
@@ -67,7 +77,7 @@ def telegramUpdate():
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length =  len(telegramUpdate['result'])
     if not length:
-        return "No messages in telegram"
+        return "no text"
     else:
         value = telegramUpdate['result']
         for val in value:
@@ -89,10 +99,11 @@ def convertText(text):
     textDecode.shareName = text[1]
     textDecode.noOfShare = text[2]
     textDecode.price = text[3]
-    if "buy" == text[0].lower():
+    if "bought" == text[0].lower():
         textDecode.stopLoss = text[4]
         textDecode.targetPrice = text[5]
     return textDecode
+
 
 def buyShare(shareInfo):
     shareCall = shareInfo.ShareCall
@@ -106,33 +117,78 @@ def buyShare(shareInfo):
         shareList = []
     else:
         id = len(shareList) + 1
-    share.populateBasicShare(id, shareInfo.shareName, shareInfo.shareExchange , textDecode.price , 
+    share.populateBasicShare(id, shareInfo.shareName, shareInfo.shareExchange ,shareInfo.shareCode, textDecode.price , 
                              textDecode.noOfShare , textDecode.stopLoss , textDecode.targetPrice , shareCall.date) 
-    share.populateCalShare(0, 0, 0, 0, 0, 0, 0, 0)
+    share.populateCalShare(0, 0, 0, 0, 0, textDecode.noOfShare, 0, 0)
     shareList.append(share)
     dict.update({shareCall.chatId:shareList})    
           
-def sellShare(chatId ,shareId, noOfShare , sellPrice):
-    shareList = dict.get(chatId)
+def sellShare(shareInfo):
+    shareCall = shareInfo.ShareCall
+    shareList = dict.get(shareCall.chatId)
+    text = convertText(shareCall.text)
     if not shareList:
         return "no share present to sell"
     else:
         for share in shareList:
-            if share.shareId == shareId:
+            if share.shareCode == shareInfo.shareCode:
                 if share.sellTicker == 0:
                     share.sellTicker = 1
-                    share.sellShareNo = noOfShare
-                    share.sellPrice = sellPrice
+                    share.sellShareNo = text.noOfShare
+                    share.sellPrice = text.price
                     share.netProfit =(share.sellShareNo*share.sellPrice) - (share.sellShareNo*share.boughtPrice)   
                     share.remainingShare = share.noOfShares  - share.sellShareNo
                 else:
-                    share.sellPrice = ((share.sellShareNo*share.sellPrice) + (noOfShare*sellPrice))/(share.sellShareNo +noOfShare)
-                    share.sellShareNo = share.sellShareNo + noOfShare
+                    share.sellPrice = ((share.sellShareNo*share.sellPrice) + (text.noOfShare*text.price))/(share.sellShareNo +text.noOfShare)
+                    share.sellShareNo = share.sellShareNo + text.noOfShare
                     share.netProfit = (share.sellPrice*share.sellShareNo) - (share.sellShareNo*share.boughtPrice) 
                     share.remainingShare = share.noOfShares - share.sellShareNo
                     
             
     
+def getLivePrice(shareCode , shareExchange):
+    print(shareCode,shareExchange)
+    params = {
+            'q': shareCode,
+            'x': shareExchange,
+            'i': "1",
+            }
+    data_list = get_price_data(params)
+    data= pd.DataFrame(data_list);
+    price = data.at[data.last_valid_index(),'High']
+    return price    
+
+def monitorShare(share , chatId):
+    print("in MonitorShare")
+    livePrice = getLivePrice(share.shareCode , share.shareExchange)
+    relisedProfit = float(share.remainingShare)*livePrice - float((int(share.remainingShare)*int(share.boughtPrice)))
+    share.realizedProfit = floor(relisedProfit)
+    stopLoss = float(share.stopLoss)
+    targetPrice = float(share.targetPrice)
+    stopLivePercent = (livePrice - stopLoss)*(float(100))/livePrice
+    print(floor(stopLivePercent))
+    targetLivePercent = (targetPrice - livePrice)*(float(100))/livePrice
+    print(floor(targetLivePercent))
+    if floor(stopLivePercent) < 1.5:
+        text = "`Stop Loss` "+str(stopLoss)+" for " + share.shareName + " is `less than 1.5 pecent` at live price " + str(livePrice)
+        sendTelegram(text , chatId)
+    if floor(targetLivePercent) < 2:
+        text = "target Price "+str(targetPrice)+" for " + share.shareName + " is less than 2 pecent at live price " + str(livePrice)
+        sendTelegram(text , chatId)
+    
+def monitorShares():
+    print("in MonitorShares")
+    keys = dict.keys()
+    for key in keys:
+        shareList = dict.get(key)
+        for share in shareList:
+            print("in second for loop")
+            if share.remainingShare != 0:
+                print("in if " , share.remainingShare)
+                monitorShare(share ,key)
+            
+            
+            
 
 '''
 buyShare(1234, "asdassd","NSE", 10, 2, "stopLoss", "targetPrice", "buyDate")
@@ -144,6 +200,10 @@ print("changes")
 sellShare(1234, 1, 1, 20)
 print(dict.get(1234)[0].netProfit)
 '''
+                    
+monitorShares()
+#writeToDisk()
+#readDicFromFile()
 
 def sendUpdateMessage(response):
     print('Successfully ' + response)
@@ -159,18 +219,19 @@ def mainfunction():
             print('Error')
         if shareInfo:
             text = shareInfo.ShareCall.text.split(",")
-            if "buy" == text[0].lower():
+            if "bought" == text[0].lower():
                 buyShare(shareInfo)
+            if "sold" == text[0].lower():
+                sellShare(shareInfo)
     writeToDisk()
     readDicFromFile()
-    sendUpdateMessage(text[0].lower())
-        
-
-
-  
-
+    sendUpdateMessage(text[0].lower())      
 schedule.every(5).minutes.do(mainfunction)
 
 while True:
     schedule.run_pending()
-    time.sleep(1)
+    time.sleep(1) 
+
+
+  
+
