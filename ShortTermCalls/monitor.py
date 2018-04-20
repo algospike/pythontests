@@ -64,7 +64,7 @@ def telegramUpdate():
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length =  len(telegramUpdate['result'])
     if not length:
-        return "no text"
+        return "No messages in telegram"
     else:
         value = telegramUpdate['result']
         for val in value:
@@ -143,6 +143,7 @@ print(dict.get(1234)[0].netProfit)
 '''
                     
 totalCall = telegramUpdate()
+
 for call in totalCall:
     shareInfo = None
     try:
