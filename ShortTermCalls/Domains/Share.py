@@ -44,3 +44,6 @@ class Share:
         self.remainingShare = remainingShare
         self.netProfit = netProfit
         self.realizedProfit = realizedProfit
+
+
+

@@ -27,12 +27,46 @@ dict = {}
 
 def readDicFromFile():
     global dict
-    dict = {}
+    read_dict = {}
     try:
         with open('user_info', 'r') as f:
-            dict = eval(f.read())
+            read_dict = eval(f.read())
     except :
         print("no file present to read")
+    populateSharesInDic(read_dict)
+
+
+def populateSharesInDic(read_dic):
+    global dict
+    dict = {}
+    for k,v in read_dic.items():
+        shareList = []
+        for e in v:
+            share = Share()
+            populateShare(share,e)
+            shareList.append(share)
+        dict.update({k:shareList})
+    print('dict',dict)
+
+def populateShare(share,e):
+        share.shareId = e['shareId'] if 'shareId' in e else 0 
+        share.shareName = e['shareName'] if 'shareName' in e else 0 
+        share.shareExchange = e['shareExchange'] if 'shareExchange' in e else 0
+        share.shareCode = e['shareCode'] if 'shareCode' in e else 0
+        share.boughtPrice = e['boughtPrice'] if 'boughtPrice' in e else 0
+        share.noOfShares = e['noOfShares'] if 'noOfShares' in e else 0
+        share.stopLoss = e['stopLoss'] if 'stopLoss' in e else 0
+        share.targetPrice = e['targetPrice'] if 'targetPrice' in e else 0
+        share.buyDate = e['buyDate'] if 'buyDate' in e else 0
+        share.sellTicker = e['sellTicker'] if 'sellTicker' in e else 0
+        share.sellShareNo = e['sellShareNo'] if 'sellShareNo' in e else 0
+        share.sellPrice =  e['sellPrice'] if 'sellPrice' in e else 0
+        share.shareReinvest = e['shareReinvest'] if 'shareReinvest' in e else 1
+        share.reinvestAmount = e['reinvestAmount'] if 'reinvestAmount' in e else 0
+        share.remainingShare = e['remainingShare'] if 'remainingShare' in e else 0
+        share.netProfit = e['netProfit'] if 'netProfit' in e else 0
+        share.realizedProfit = e['realizedProfit'] if 'realizedProfit' in e else 0
+        print('share',share)
 
 
 def writeToDisk():
@@ -371,12 +405,14 @@ def createInstruction():
     for key in keys:
         sendTelegram(text, key)
 
-
+'''
 mainfunction()
 monitorShares()
 sendPortfolioUpdates()
 finalShortTermRst()
-#readDicFromFile()
+'''
+
+readDicFromFile()
 #createInstruction()
 #schedule.every().day.interval
 # schedule.every(1).seconds.do(mainfunction)
