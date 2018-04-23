@@ -1,6 +1,5 @@
 '''
 Created on Apr 13, 2018
-
 @author: C-Arpanjeet.Sandhu
 '''
 
@@ -13,18 +12,21 @@ from bs4 import BeautifulSoup as soup
 import pandas as pd
 from googlefinance.client import get_price_data
 import json
-import datetime 
 from math import floor
 import jsonpickle
-import time
 import schedule
-from argcomplete.compat import str
-from _ast import Str
-from numpy import str0
-
+from datetime import datetime as dt, time as t
+import time
+import datetime
 dict = {}
 
-
+def fileOperation():
+    print("in file Operation")
+    writeToDisk()
+    readDicFromFile()
+    print("file Operation end")
+    
+    
 def readDicFromFile():
     global dict
     read_dict = {}
@@ -43,30 +45,10 @@ def populateSharesInDic(read_dic):
         shareList = []
         for e in v:
             share = Share()
-            populateShare(share,e)
+            share.populateShare(e)
             shareList.append(share)
         dict.update({k:shareList})
     print('dict',dict)
-
-def populateShare(share,e):
-        share.shareId = e['shareId'] if 'shareId' in e else 0 
-        share.shareName = e['shareName'] if 'shareName' in e else 0 
-        share.shareExchange = e['shareExchange'] if 'shareExchange' in e else 0
-        share.shareCode = e['shareCode'] if 'shareCode' in e else 0
-        share.boughtPrice = e['boughtPrice'] if 'boughtPrice' in e else 0
-        share.noOfShares = e['noOfShares'] if 'noOfShares' in e else 0
-        share.stopLoss = e['stopLoss'] if 'stopLoss' in e else 0
-        share.targetPrice = e['targetPrice'] if 'targetPrice' in e else 0
-        share.buyDate = e['buyDate'] if 'buyDate' in e else 0
-        share.sellTicker = e['sellTicker'] if 'sellTicker' in e else 0
-        share.sellShareNo = e['sellShareNo'] if 'sellShareNo' in e else 0
-        share.sellPrice =  e['sellPrice'] if 'sellPrice' in e else 0
-        share.shareReinvest = e['shareReinvest'] if 'shareReinvest' in e else 1
-        share.reinvestAmount = e['reinvestAmount'] if 'reinvestAmount' in e else 0
-        share.remainingShare = e['remainingShare'] if 'remainingShare' in e else 0
-        share.netProfit = e['netProfit'] if 'netProfit' in e else 0
-        share.realizedProfit = e['realizedProfit'] if 'realizedProfit' in e else 0
-        print('share',share)
 
 
 def writeToDisk():
@@ -106,7 +88,7 @@ def sendTelegram(totalResponse , chatId):
     try:
         print("in sendTelegram" , totalResponse)
         bot_id = "bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I"  # bot id 
-        url = "https://api.telegram.org/" + bot_id + "/sendMessage?chat_id=" + str(chatId) + "&text= " + str(totalResponse) + "&parse_mode=Markdown"   
+        url = "https://api.telegram.org/" + bot_id + "/sendMessage?chat_id=" + str(chatId) + "&text= " + str(totalResponse) + "&parse_mode=HTML"   
         request.get(url)
         return True 
     except Exception as e:
@@ -120,7 +102,7 @@ def telegramUpdate():
     totalCall = []
     nwTime = datetime.datetime.now().timestamp()
     nw = floor(nwTime)
-    bfTime = datetime.datetime.now() - datetime.timedelta(hours=10)
+    bfTime = datetime.datetime.now() - datetime.timedelta(hours=5)
     bf = floor(bfTime.timestamp())
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length = len(telegramUpdate['result'])
@@ -235,7 +217,8 @@ def monitorShare(share , chatId):
     print("in MonitorShare")
     #livePrice = getLivePrice(share.shareCode , share.shareExchange)
     livePrice = getLivePrice1(share.shareCode)
-    realizedProfit = float(share.remainingShare) * livePrice - float((int(share.remainingShare) * int(share.boughtPrice)))
+    print("live price for",share.shareCode,livePrice)
+    realizedProfit = (share.remainingShare * livePrice) - (share.remainingShare * share.boughtPrice)
     realizedProfit = round(realizedProfit , 2)
     share.realizedProfit = realizedProfit
     stopLoss = share.stopLoss
@@ -245,41 +228,33 @@ def monitorShare(share , chatId):
     targetLivePercent = (targetPrice - livePrice) * (float(100)) / livePrice
     print(floor(targetLivePercent))
     if floor(stopLivePercent) < 1.5:
-        text = "`Stop Loss` " + str(stopLoss) + " for " + share.shareName + " is `less than 1.5 pecent` at live price " + str(livePrice)
-        #sendTelegram(text , chatId)
+        text = "Stop Loss " + str(stopLoss) + " for " + share.shareName + " is less than 1.5 percent at live price " + str(livePrice)
+        sendTelegram(text , chatId)
     if floor(targetLivePercent) < 2:
-        text = "target Price " + str(targetPrice) + " for " + share.shareName + " is less than 2 pecent at live price " + str(livePrice)
-        #sendTelegram(text , chatId)
+        text = "target Price " + str(targetPrice) + " for " + share.shareName + " is less than 2 percent at live price " + str(livePrice)
+        sendTelegram(text , chatId)
 
-    
+
+
 def monitorShares():
-    print("in MonitorShares")
-    print(dict)
-    keys = dict.keys()
-    for key in keys:
-        shareList = dict.get(key)
-        for share in shareList:
-            print("in second for loop")
-            try:
-                share = jsonpickle.decode(json.dumps(share))
-            except :
-                print("file read share")
-            if share.remainingShare != 0:
-                print("in if " , share.remainingShare)
-                monitorShare(share , key)
-                print(dict.get(key)[0])
-    writeToDisk()        
+    marketOpen = False
+    if t(9,30) <=  dt.now().time() <= t(18,30):
+        marketOpen  = True
+    if marketOpen:
+        print("in MonitorShares")
+        print(dict)
+        keys = dict.keys()
+        for key in keys:
+            shareList = dict.get(key)
+            for share in shareList:
+                if share.remainingShare != 0:
+                    print("in if " , share.remainingShare)
+                    monitorShare(share , key)
+                    print(dict.get(key)[0])
+        writeToDisk()
+    else:
+        print('Market closed')        
 
-'''
-buyShare(1234, "asdassd","NSE", 10, 2, "stopLoss", "targetPrice", "buyDate")
-sellShare(1234, 1, 1 , 15)
-print(dict.get(1234)[0].shareName)
-print(dict.get(1234)[0].sellTicker)
-print(dict.get(1234)[0].netProfit)
-print("changes")
-sellShare(1234, 1, 1, 20)
-print(dict.get(1234)[0].netProfit)
-'''
 
 
 def sendUpdateMessage(type , share , call):
@@ -292,7 +267,6 @@ def sendUpdateMessage(type , share , call):
     
 def mainfunction():
     print("in mainFunction")
-    #readDicFromFile()
     totalCall = telegramUpdate()
      
     for call in totalCall:
@@ -307,16 +281,15 @@ def mainfunction():
             text = shareInfo.ShareCall.text.split(",")
             if "bought" == text[0].lower():
                 share = buyShare(shareInfo)
-                #sendUpdateMessage(text[0].lower() , share , call)
+                sendUpdateMessage(text[0].lower() , share , call)
             if "sold" == text[0].lower():
                 share = sellShare(shareInfo)
-               # sendUpdateMessage(text[0].lower() , share , call)
+                sendUpdateMessage(text[0].lower() , share , call)
             if "reinvest" == text[0].lower():
                 share = reinvestShare(shareInfo)
                 sendUpdateMessage(text[0].lower() , share , call)
-            
+    print(dict)        
     writeToDisk()
-    #readDicFromFile()
 
         
 def reinvestShare(shareInfo):
@@ -346,7 +319,7 @@ def finalShortTermRst():
         totalProfit = 0.0
         totalRealizedProfit = 0.0
         netBuy = 0.0
-        text = "``` TotalAmount  NetProfit  Profit \n"
+        text = "<pre> Amount  Net  Relz. \n"
         for share in shareList:
             totalBuy = totalBuy + (share.boughtPrice * share.noOfShares)
             totalBuy = round(totalBuy , 2)
@@ -354,65 +327,57 @@ def finalShortTermRst():
             totalReinvest = totalReinvest + share.reinvestAmount
             totalRealizedProfit = totalRealizedProfit + share.realizedProfit  
             netBuy = totalBuy - totalReinvest
-        text = text + str(netBuy)
-        if totalProfit < 0:
-            text = text + "  `" + str(totalProfit) + "`"
-        else:
-            text = text + "  " + str(totalProfit)
-        if totalRealizedProfit < 0:
-            text = text + "  `" + str(totalRealizedProfit) + "`"
-        else:
-            text = text + "  " + str(totalRealizedProfit)
-        text = text + "```"  
+        offset =13 - len(str(netBuy)) 
+        offsetProfit = 12 - len(str(totalProfit)) 
+        text = text + " " + str(netBuy) + " " * offset
+        text = text +  " " + str(totalProfit) + " " * offsetProfit
+        text = text +  " " + str(totalRealizedProfit)
+        text = text + " </pre>"  
         sendTelegram(text, key)
 
                    
 def sendPortfolioUpdates():
     print('send portfolio updates')
-    #readDicFromFile()
-    # print(dict)
     keys = dict.keys()
     now = datetime.datetime.now()
     for key in keys:
-        filename = str(key) + "_" + str(now.year) + '-' + str(now.month) + '-' + str(now.day)
-        # print('reading file',filename)
-        with open(filename, 'r') as f:
-            s = f.read()
-            share = jsonpickle.decode(s)
-            createMessageForShares(key, share)
+        shareList = dict.get(key)
+        createMessageForShares(key, shareList)
 
 
 def createMessageForShares(key, shares):
-    text = '```'
+    indentation = 15 
+    text = "<pre> ShareName     Net   Relz. \n"
+    count = 0
     for s in shares:
-        text = text + ' ' + str(s.shareCode)
-        if s.netProfit < 0:
-            text = text + "    `" + str(s.netProfit) + "`"
-        else:
-            text = text + "    " + str(s.netProfit)
-        if s.realizedProfit < 0:
-            text = text + "    `" + str(s.realizedProfit) + "`\n"
-        else:
-            text = text + "    " + str(s.realizedProfit) +"\n"
+        offset = (indentation - len(str(s.shareCode)))
+        offsetProfit = (10 - len(str(round(s.netProfit,2)))) 
+        offsetRel = (10 - len(str(round(s.realizedProfit,2)))) 
+        print('offset',offset)
+        text = text + ' ' + str(s.shareCode) + " " * offset
+        text = text + " " + str(round(s.netProfit,2)) + " " * offsetProfit 
+        text = text + " " + str(round(s.realizedProfit,2)) + " " * offsetRel +"\n"
+        count = count + 1
+    text = text + " </pre>"  
     print('sending to ', key)
-    sendTelegram(text + '```', key)
+    sendTelegram(text + '', key)
 
 
     # print(v)
 def createInstruction():
-    text = "``` For Bought Share :-Bought,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice \n \n For Sold Share :-Sold,Sharename,NoOfShare,BoughtPrice```"
+    text = "``` For Bought Share :-Bought,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice \n \n For Sold Share :-Sold,Sharename,NoOfShare,BoughtPrice \n \n For Reinvest Share :-reinvest,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice```"
     keys = dict.keys()
     for key in keys:
         sendTelegram(text, key)
 
-'''
+
+
 mainfunction()
 monitorShares()
+fileOperation()
 sendPortfolioUpdates()
 finalShortTermRst()
-'''
 
-readDicFromFile()
 #createInstruction()
 #schedule.every().day.interval
 # schedule.every(1).seconds.do(mainfunction)
@@ -422,6 +387,7 @@ readDicFromFile()
 # schedule.every().day.at("9:00").do(createInstruction)
 
 # schedule.every(5).minutes.do(mainfunction)
+
 # schedule.every(2).hour.do(monitorShares)
 
 while True:
