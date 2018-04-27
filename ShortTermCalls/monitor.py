@@ -102,7 +102,7 @@ def telegramUpdate():
     totalCall = []
     nwTime = datetime.datetime.now().timestamp()
     nw = floor(nwTime)
-    bfTime = datetime.datetime.now() - datetime.timedelta(hours=5)
+    bfTime = datetime.datetime.now() - datetime.timedelta(minutes=5)
     bf = floor(bfTime.timestamp())
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length = len(telegramUpdate['result'])
@@ -164,9 +164,10 @@ def buyShare(shareInfo):
     share.populateBasicShare(id, shareInfo.shareName,shareInfo.shareCode,shareInfo.shareExchange , textDecode.price ,
                              textDecode.noOfShare , textDecode.stopLoss , textDecode.targetPrice , shareCall.date) 
     share.remainingShare = textDecode.noOfShare
+    share.realizedProfit = 0.0
     shareList.append(share)
     dict.update({shareCall.chatId:shareList})    
-    print("in buy share", dict)
+    #print("in buy share", dict)
     return share
 
           
@@ -190,17 +191,17 @@ def sellShare(shareInfo):
                     share.sellShareNo = share.sellShareNo + text.noOfShare
                     share.netProfit = (share.sellPrice * share.sellShareNo) - (share.sellShareNo * share.boughtPrice) 
                     share.remainingShare = share.noOfShares - share.sellShareNo
-        return share
+                return share
     
 def getLivePrice(shareCode , shareExchange):
-    print(shareCode, shareExchange)
+    #print(shareCode, shareExchange)
     params = {
             'q': shareCode,
             'x': shareExchange,
             'i': "1",
             }
     data_list = get_price_data(params)
-    print(data_list)
+    #print(data_list)
     data = pd.DataFrame(data_list);
     price = data.at[data.last_valid_index(), 'High']
     return price    
@@ -215,18 +216,21 @@ def getLivePrice1(value):
 
 def monitorShare(share , chatId):
     print("in MonitorShare")
-    #livePrice = getLivePrice(share.shareCode , share.shareExchange)
-    livePrice = getLivePrice1(share.shareCode)
-    print("live price for",share.shareCode,livePrice)
+    livePrice = 0.0
+    try:
+        livePrice = getLivePrice(share.shareCode , share.shareExchange)
+    except Exception as e: 
+        print("excpetion occur due to market close " , e)
+        livePrice = getLivePrice1(share.shareCode)
+    
+    #print("live price for",share.shareCode,livePrice)
     realizedProfit = (share.remainingShare * livePrice) - (share.remainingShare * share.boughtPrice)
     realizedProfit = round(realizedProfit , 2)
     share.realizedProfit = realizedProfit
     stopLoss = share.stopLoss
     targetPrice = share.targetPrice
     stopLivePercent = (livePrice - stopLoss) * (float(100)) / livePrice
-    print(floor(stopLivePercent))
     targetLivePercent = (targetPrice - livePrice) * (float(100)) / livePrice
-    print(floor(targetLivePercent))
     if floor(stopLivePercent) < 1.5:
         text = "Stop Loss " + str(stopLoss) + " for " + share.shareName + " is less than 1.5 percent at live price " + str(livePrice)
         sendTelegram(text , chatId)
@@ -238,7 +242,8 @@ def monitorShare(share , chatId):
 
 def monitorShares():
     marketOpen = False
-    if t(9,30) <=  dt.now().time() <= t(18,30):
+    print("time on server",dt.now().time())
+    if t(9,00) <=  dt.now().time() <= t(15,30) and datetime.datetime.today().weekday() < 5:
         marketOpen  = True
     if marketOpen:
         print("in MonitorShares")
@@ -272,7 +277,7 @@ def mainfunction():
     for call in totalCall:
         shareInfo = None
         try:
-            print(call.text)
+            #print(call.text)
             shareInfo = shareNameExchange(call)    
         except Exception as e:
             print(e)
@@ -288,7 +293,7 @@ def mainfunction():
             if "reinvest" == text[0].lower():
                 share = reinvestShare(shareInfo)
                 sendUpdateMessage(text[0].lower() , share , call)
-    print(dict)        
+    #print(dict)        
     writeToDisk()
 
         
@@ -319,7 +324,7 @@ def finalShortTermRst():
         totalProfit = 0.0
         totalRealizedProfit = 0.0
         netBuy = 0.0
-        text = "<pre> Amount  Net  Relz. \n"
+       
         for share in shareList:
             totalBuy = totalBuy + (share.boughtPrice * share.noOfShares)
             totalBuy = round(totalBuy , 2)
@@ -327,10 +332,29 @@ def finalShortTermRst():
             totalReinvest = totalReinvest + share.reinvestAmount
             totalRealizedProfit = totalRealizedProfit + share.realizedProfit  
             netBuy = totalBuy - totalReinvest
-        offset =13 - len(str(netBuy)) 
-        offsetProfit = 12 - len(str(totalProfit)) 
-        text = text + " " + str(netBuy) + " " * offset
-        text = text +  " " + str(totalProfit) + " " * offsetProfit
+        lenBuy = len(str(netBuy))
+        lenAmount = len("Amount")
+        lenProfit = len(str(totalProfit))
+        offset = 0 
+        offsetProfit = 0
+        text = ""
+        if lenBuy < lenAmount:
+            text = text + "<pre> Amount" + " "
+            offset = lenAmount
+        else:
+            text = text + "<pre> Amount" + " "*(lenBuy - lenAmount + 1)
+            offset = lenBuy
+        if lenProfit < len("Net"):
+            text = text + "Net "
+            offsetProfit = len("Net")
+        else:
+            text = text + "Net" + " "*(lenProfit - len("Net") + 1)
+            offsetProfit = lenProfit
+        text = text + "Relz. \n"
+         
+         
+        text = text + " " + str(netBuy) + " " * (offset - len(str(netBuy)))
+        text = text +  " " + str(totalProfit) + " " * (offsetProfit - len(str(totalProfit)))
         text = text +  " " + str(totalRealizedProfit)
         text = text + " </pre>"  
         sendTelegram(text, key)
@@ -346,49 +370,49 @@ def sendPortfolioUpdates():
 
 
 def createMessageForShares(key, shares):
-    indentation = 15 
-    text = "<pre> ShareName     Net   Relz. \n"
-    count = 0
+    lnCode = 0
+    lnProfit = 0
+    for sh in shares:
+        if lnCode < len(str(sh.shareCode)):
+            lnCode = len(str(sh.shareCode))
+        if lnProfit < len(str(round(sh.netProfit,2))):
+            lnProfit = len(str(round(sh.netProfit,2)))
+        
+    shareLen = len("ShareName")
+    text = ""
+    if shareLen < lnCode:
+        text = text + "<pre> ShareName" + " "*((lnCode - shareLen) + 1) 
+    else:
+        text = text + "<pre> ShareName" + " "*((shareLen - lnCode) + 1)
+    text = text + "Net"+" "*((lnProfit - len("Net")) + 1 ) + "Relz \n"  
     for s in shares:
-        offset = (indentation - len(str(s.shareCode)))
-        offsetProfit = (10 - len(str(round(s.netProfit,2)))) 
-        offsetRel = (10 - len(str(round(s.realizedProfit,2)))) 
-        print('offset',offset)
+        offset = (lnCode - len(str(s.shareCode)))
+        offsetProfit = (lnProfit - len(str(round(s.netProfit,2)))) 
         text = text + ' ' + str(s.shareCode) + " " * offset
         text = text + " " + str(round(s.netProfit,2)) + " " * offsetProfit 
-        text = text + " " + str(round(s.realizedProfit,2)) + " " * offsetRel +"\n"
-        count = count + 1
+        text = text + " " + str(round(s.realizedProfit,2)) + "\n"
     text = text + " </pre>"  
     print('sending to ', key)
     sendTelegram(text + '', key)
 
 
-    # print(v)
 def createInstruction():
-    text = "``` For Bought Share :-Bought,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice \n \n For Sold Share :-Sold,Sharename,NoOfShare,BoughtPrice \n \n For Reinvest Share :-reinvest,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice```"
+    text = "<pre> For Bought Share :-Bought,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice \n \n For Sold Share :-Sold,Sharename,NoOfShare,BoughtPrice \n \n For Reinvest Share :-reinvest,Sharename,NoOfShare,BoughtPrice,StopLoss,TargetPrice  </pre> "
     keys = dict.keys()
     for key in keys:
         sendTelegram(text, key)
 
 
+schedule.every(5).minutes.do(mainfunction)
+schedule.every(10).minutes.do(monitorShares)
+schedule.every(14).minutes.do(finalShortTermRst)
+schedule.every(13).minutes.do(sendPortfolioUpdates)
+schedule.every(15).minutes.do(fileOperation)
 
-mainfunction()
-monitorShares()
-fileOperation()
-sendPortfolioUpdates()
-finalShortTermRst()
-
-#createInstruction()
-#schedule.every().day.interval
-# schedule.every(1).seconds.do(mainfunction)
-# schedule.every(5).seconds.do(monitorShares)
-# schedule.every(10).seconds.do(sendPortfolioUpdates)
-# schedule.every().day.at("20:30").do(sendPortfolioUpdates)
-# schedule.every().day.at("9:00").do(createInstruction)
-
-# schedule.every(5).minutes.do(mainfunction)
-
-# schedule.every(2).hour.do(monitorShares)
+#schedule.every().day.at("9:00").do(fileOperation)
+#schedule.every().day.at("9:02").do(createInstruction)
+#schedule.every().day.at("20:45").do(sendPortfolioUpdates)
+#schedule.every().day.at("20:55").do(finalShortTermRst)
 
 while True:
     schedule.run_pending()
