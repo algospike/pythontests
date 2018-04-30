@@ -67,11 +67,6 @@ def writeToDisk():
         f.write(jsonpickle.encode(dict))
     with open('/home/shortterm/files/user_info', 'w') as f:
         f.write(jsonpickle.encode(dict))
-    keys = dict.keys()
-    for key in keys:
-        with open(str(key) + "_" + str(now.year) + '-' + str(now.month) + '-' + str(now.day), 'w') as f:
-            f.write(jsonpickle.encode(dict.get(key)))
-
     print('dict after write ',dict)
     print('file written')
 
