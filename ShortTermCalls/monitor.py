@@ -20,6 +20,8 @@ import time
 import datetime
 dict = {}
 
+runTelegramMin = 2
+
 def fileOperation():
     print("in file Operation")
     writeToDisk()
@@ -30,12 +32,17 @@ def fileOperation():
 def readDicFromFile():
     global dict
     read_dict = {}
+    read_fail =  False
     try:
-        with open('user_info', 'r') as f:
-            read_dict = eval(f.read())
+        with open('/home/shortterm/files/user_info', 'r') as f:
+	    print('reading file user_info at /home/shortterm/files/user_info')
+	    read_dict = eval(f.read())
     except :
         print("no file present to read")
-    populateSharesInDic(read_dict)
+	read_fail = True
+    if not read_fail:
+	print('read from file ', read_dict)
+    	populateSharesInDic(read_dict)
 
 
 def populateSharesInDic(read_dic):
@@ -48,23 +55,24 @@ def populateSharesInDic(read_dic):
             share.populateShare(e)
             shareList.append(share)
         dict.update({k:shareList})
-    print('dict',dict)
+    print('dict after read ',dict)
 
 
 def writeToDisk():
     print('writing to disk')
     now = datetime.datetime.now()
-    filename = 'user_info_' + str(now.year) + '-' + str(now.month) + '-' + str(now.day) 
+    filename = '/home/shortterm/files/user_info_' + str(now.year) + '-' + str(now.month) + '-' + str(now.day) 
     with open(filename, 'w') as f:
         f.write(jsonpickle.encode(dict))
-    with open('user_info', 'w') as f:
+    with open('/home/shortterm/files/user_info', 'w') as f:
         f.write(jsonpickle.encode(dict))
     keys = dict.keys()
     for key in keys:
         with open(str(key) + "_" + str(now.year) + '-' + str(now.month) + '-' + str(now.day), 'w') as f:
             f.write(jsonpickle.encode(dict.get(key)))
 
-    # print('dict',dict)
+    print('dict after write ',dict)
+    print('file written')
 
 
 def shareNameExchange(shareCall):
@@ -97,12 +105,13 @@ def sendTelegram(totalResponse , chatId):
         sendTelegram(totalResponse, chatId)
         
             
+
 def telegramUpdate():
     print("Telegram Update")
     totalCall = []
     nwTime = datetime.datetime.now().timestamp()
     nw = floor(nwTime)
-    bfTime = datetime.datetime.now() - datetime.timedelta(minutes=5)
+    bfTime = datetime.datetime.now() - datetime.timedelta(minutes=runTelegramMin)
     bf = floor(bfTime.timestamp())
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length = len(telegramUpdate['result'])
@@ -293,7 +302,7 @@ def mainfunction():
             if "reinvest" == text[0].lower():
                 share = reinvestShare(shareInfo)
                 sendUpdateMessage(text[0].lower() , share , call)
-    #print(dict)        
+    print(dict)        
     writeToDisk()
 
         
@@ -403,11 +412,11 @@ def createInstruction():
         sendTelegram(text, key)
 
 
-schedule.every(5).minutes.do(mainfunction)
-schedule.every(10).minutes.do(monitorShares)
-schedule.every(14).minutes.do(finalShortTermRst)
+schedule.every(runTelegramMin).minutes.do(mainfunction)
+schedule.every(3).minutes.do(monitorShares)
+schedule.every(4).minutes.do(finalShortTermRst)
 schedule.every(13).minutes.do(sendPortfolioUpdates)
-schedule.every(15).minutes.do(fileOperation)
+schedule.every(4).minutes.do(fileOperation)
 
 #schedule.every().day.at("9:00").do(fileOperation)
 #schedule.every().day.at("9:02").do(createInstruction)
