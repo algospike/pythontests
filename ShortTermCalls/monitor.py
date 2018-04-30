@@ -413,14 +413,15 @@ def createInstruction():
         sendTelegram(text, key)
 
 
-#schedule.every(runTelegramMin).minutes.do(mainfunction)
+schedule.every(runTelegramMin).minutes.do(mainfunction)
+schedule.every(4).minutes.do(fileOperation)
 #schedule.every(runTelegramSeconds).seconds.do(mainfunction)
-#schedule.every(3).minutes.do(monitorShares)
-#schedule.every(4).minutes.do(finalShortTermRst)
+schedule.every(3).minutes.do(monitorShares)
+schedule.every(5).minutes.do(finalShortTermRst)
 #schedule.every(13).minutes.do(sendPortfolioUpdates)
-#schedule.every(4).minutes.do(fileOperation)
-schedule.every(runTelegramSeconds).seconds.do(mainfunction)
-schedule.every(runTelegramSeconds).seconds.do(fileOperation)
+
+#schedule.every(runTelegramSeconds).seconds.do(mainfunction)
+#schedule.every(runTelegramSeconds).seconds.do(fileOperation)
 
 #schedule.every().day.at("9:00").do(fileOperation)
 #schedule.every().day.at("9:02").do(createInstruction)
