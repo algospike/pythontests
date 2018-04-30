@@ -40,7 +40,7 @@ def readDicFromFile():
             read_dict = eval(f.read())
     except :
         print("no file present to read")
-    read_fail = True
+        read_fail = True
     if not read_fail:
         print('read from file ', read_dict)
         populateSharesInDic(read_dict)
