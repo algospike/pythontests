@@ -21,6 +21,7 @@ import datetime
 dict = {}
 
 runTelegramMin = 1
+runTelegramSeconds = 10
 
 def fileOperation():
     print("in file Operation")
@@ -286,10 +287,10 @@ def mainfunction():
     for call in totalCall:
         shareInfo = None
         try:
-            #print(call.text)
+            print(call.text)
             shareInfo = shareNameExchange(call)    
         except Exception as e:
-            print(e)
+            print('share info error',e)
         if shareInfo:
             
             text = shareInfo.ShareCall.text.split(",")
@@ -302,7 +303,7 @@ def mainfunction():
             if "reinvest" == text[0].lower():
                 share = reinvestShare(shareInfo)
                 sendUpdateMessage(text[0].lower() , share , call)
-    print(dict)        
+    print('first time',dict)        
     writeToDisk()
 
         
@@ -412,11 +413,14 @@ def createInstruction():
         sendTelegram(text, key)
 
 
-schedule.every(runTelegramMin).minutes.do(mainfunction)
-schedule.every(3).minutes.do(monitorShares)
-schedule.every(4).minutes.do(finalShortTermRst)
-schedule.every(13).minutes.do(sendPortfolioUpdates)
-schedule.every(4).minutes.do(fileOperation)
+#schedule.every(runTelegramMin).minutes.do(mainfunction)
+#schedule.every(runTelegramSeconds).seconds.do(mainfunction)
+#schedule.every(3).minutes.do(monitorShares)
+#schedule.every(4).minutes.do(finalShortTermRst)
+#schedule.every(13).minutes.do(sendPortfolioUpdates)
+#schedule.every(4).minutes.do(fileOperation)
+schedule.every(runTelegramSeconds).seconds.do(mainfunction)
+schedule.every(runTelegramSeconds).seconds.do(fileOperation)
 
 #schedule.every().day.at("9:00").do(fileOperation)
 #schedule.every().day.at("9:02").do(createInstruction)
