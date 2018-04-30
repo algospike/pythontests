@@ -20,7 +20,7 @@ import time
 import datetime
 dict = {}
 
-runTelegramMin = 2
+runTelegramMin = 1
 
 def fileOperation():
     print("in file Operation")
@@ -35,14 +35,14 @@ def readDicFromFile():
     read_fail =  False
     try:
         with open('/home/shortterm/files/user_info', 'r') as f:
-	    print('reading file user_info at /home/shortterm/files/user_info')
-	    read_dict = eval(f.read())
+            print('reading file user_info at /home/shortterm/files/user_info')
+            read_dict = eval(f.read())
     except :
         print("no file present to read")
-	read_fail = True
+    read_fail = True
     if not read_fail:
-	print('read from file ', read_dict)
-    	populateSharesInDic(read_dict)
+        print('read from file ', read_dict)
+        populateSharesInDic(read_dict)
 
 
 def populateSharesInDic(read_dic):
@@ -252,7 +252,7 @@ def monitorShare(share , chatId):
 def monitorShares():
     marketOpen = False
     print("time on server",dt.now().time())
-    if t(9,00) <=  dt.now().time() <= t(15,30) and datetime.datetime.today().weekday() < 5:
+    if t(9,0) <=  dt.now().time() <= t(15,30) and datetime.datetime.today().weekday() < 5:
         marketOpen  = True
     if marketOpen:
         print("in MonitorShares")
@@ -423,7 +423,7 @@ schedule.every(4).minutes.do(fileOperation)
 #schedule.every().day.at("20:45").do(sendPortfolioUpdates)
 #schedule.every().day.at("20:55").do(finalShortTermRst)
 
+print('Started')
 while True:
     schedule.run_pending()
     time.sleep(1) 
-
