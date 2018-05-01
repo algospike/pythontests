@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup as soup
 import pandas as pd
 from googlefinance.client import get_price_data
 import json
-from math import floor
+from math import floor, ceil
 import jsonpickle
 import schedule
 from datetime import datetime as dt, time as t
@@ -20,8 +20,8 @@ import time
 import datetime
 dict = {}
 
-runTelegramMin = 1
-runTelegramSeconds = 10
+runTelegramHr = 1
+
 
 def fileOperation():
     print("in file Operation")
@@ -72,7 +72,7 @@ def writeToDisk():
 
 
 def shareNameExchange(shareCall):
-    text = shareCall.text.split(",")
+    text = shareCall.text.strip().split(",")
     shareName = text[1].strip().replace(" " , "+")
     url = "https://www.google.co.in/search?q=" + shareName + "+share+price&oq=" + shareName + "+share+price&aqs=chrome..69i57j0l2.8499j0j4&sourceid=chrome&ie=UTF-8"
     res = request.get(url)
@@ -106,9 +106,11 @@ def telegramUpdate():
     print("Telegram Update")
     totalCall = []
     nwTime = datetime.datetime.now().timestamp()
-    nw = floor(nwTime)
-    bfTime = datetime.datetime.now() - datetime.timedelta(minutes=runTelegramMin)
+    nw = ceil(nwTime)
+    bfTime = datetime.datetime.now() - datetime.timedelta(hours=runTelegramHr)
     bf = floor(bfTime.timestamp())
+    print("time to compare before",bf)
+    print("time to compare now",nw)
     telegramUpdate = json.loads(request.get("https://api.telegram.org/bot564398612:AAEXUIfrJVFHfBnxS4Uot0Ob5vDPN8Ws69I/getUpdates").text)
     length = len(telegramUpdate['result'])
     if not length:
@@ -128,15 +130,15 @@ def telegramUpdate():
 
 
 def convertText(text):
-    text = text.split(",")
+    text = text.strip().split(",")
     textDecode = TextDecode()
-    textDecode.typeMethod = text[0]
-    textDecode.shareName = text[1]
-    textDecode.noOfShare = int(text[2])
-    textDecode.price = float(text[3])
+    textDecode.typeMethod = text[0].strip()
+    textDecode.shareName = text[1].strip()
+    textDecode.noOfShare = int(text[2].strip())
+    textDecode.price = float(text[3].strip())
     if "sold" != text[0].lower():
-        textDecode.stopLoss = float(text[4])
-        textDecode.targetPrice = float(text[5])
+        textDecode.stopLoss = float(text[4].strip())
+        textDecode.targetPrice = float(text[5].strip())
     return textDecode
 
 
@@ -288,7 +290,7 @@ def mainfunction():
             print('share info error',e)
         if shareInfo:
             
-            text = shareInfo.ShareCall.text.split(",")
+            text = shareInfo.ShareCall.text.strip().split(",")
             if "bought" == text[0].lower():
                 share = buyShare(shareInfo)
                 sendUpdateMessage(text[0].lower() , share , call)
@@ -408,20 +410,12 @@ def createInstruction():
         sendTelegram(text, key)
 
 
-schedule.every(runTelegramMin).minutes.do(mainfunction)
-schedule.every(4).minutes.do(fileOperation)
-#schedule.every(runTelegramSeconds).seconds.do(mainfunction)
-schedule.every(3).minutes.do(monitorShares)
-schedule.every(5).minutes.do(finalShortTermRst)
-#schedule.every(13).minutes.do(sendPortfolioUpdates)
-
-#schedule.every(runTelegramSeconds).seconds.do(mainfunction)
-#schedule.every(runTelegramSeconds).seconds.do(fileOperation)
-
-#schedule.every().day.at("9:00").do(fileOperation)
-#schedule.every().day.at("9:02").do(createInstruction)
-#schedule.every().day.at("20:45").do(sendPortfolioUpdates)
-#schedule.every().day.at("20:55").do(finalShortTermRst)
+schedule.every(runTelegramHr).hours.do(mainfunction)
+schedule.every(2).hours.do(monitorShares)
+schedule.every().day.at("9:00").do(fileOperation)
+schedule.every().day.at("9:02").do(createInstruction)
+schedule.every().day.at("20:45").do(sendPortfolioUpdates)
+schedule.every().day.at("20:55").do(finalShortTermRst)
 
 print('Started')
 while True:
